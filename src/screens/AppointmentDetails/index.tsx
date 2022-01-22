@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ImageBackground, Text, View, FlatList, Alert } from 'react-native';
+import { ImageBackground, Text, View, FlatList, Alert, Share, Platform } from 'react-native';
 import { styles } from './styles';
 import { Fontisto } from '@expo/vector-icons';
 import { Background } from "../../components/Background";
 import { Header } from "../../components/Header";
 import { BorderlessButton } from 'react-native-gesture-handler';
 import { theme } from '../../global/styles/theme';
+import * as Linking from 'expo-linking';
 
 import { ListHeader } from '../../components/ListHeader';
 import { Member, MemberProps } from '../../components/Member';
@@ -29,7 +30,6 @@ type GuildWidget = {
     name: string;
     instant_invite: string;
     members: MemberProps[];
-    presence_count: number;
 }
 
 export function AppointmentDetails() {
@@ -41,29 +41,32 @@ export function AppointmentDetails() {
     async function fetchGuildWidget() {
         try {
             const response = await api.get(`/guilds/${guildSelected.guild.id}/widget.json`);
+            //console.log(response.data);
             setWidget(response.data);
             setLoading(false);
         } catch {
-            Alert.alert('Verifique as configurações do servidor.');
+            Alert.alert('Verifique as configurações do servidor. Será que o widget está habilitado?');
         } finally {
             setLoading(false);
         }
     }
 
-    const members = [
-        {
-            id: '1',
-            username: 'Rafael',
-            avatar_url: 'https://github.com/rafaeljunio.png',
-            status: 'online'
-        },
-        {
-            id: '2',
-            username: 'Rafael',
-            avatar_url: 'https://github.com/rafaeljunio.png',
-            status: 'offline'
-        }
-    ];
+    function handleShareInvitation() {
+        const message = Platform.OS === 'ios'
+            ? `Junte-se a ${guildSelected.guild.name}`
+            : widget.instant_invite;
+
+        Share.share({
+            message,
+            url: widget.instant_invite
+        });
+    }
+
+    function handleOpenGuild() {
+        Linking.openURL(widget.instant_invite);
+    }
+
+
 
     useEffect(() => {
         fetchGuildWidget();
@@ -75,7 +78,8 @@ export function AppointmentDetails() {
             <Header
                 title="Detalhes"
                 action={
-                    <BorderlessButton>
+                    guildSelected.guild.owner &&
+                    <BorderlessButton onPress={handleShareInvitation}>
                         <Fontisto
                             name="share"
                             size={24}
@@ -107,7 +111,6 @@ export function AppointmentDetails() {
                     <>
                         <ListHeader
                             title="Jogadores"
-                            //subtitle="Total 3"
                             subtitle={`Total ${widget.members.length}`}
                         />
 
@@ -123,9 +126,16 @@ export function AppointmentDetails() {
                         />
                     </>
             }
-            <View style={styles.footer}>
-                <ButtonIcon title="Entrar na Partida" />
-            </View>
+            {
+                guildSelected.guild.owner &&
+                <View style={styles.footer}>
+                    <ButtonIcon
+                        title="Entrar na Partida"
+                        onPress={handleOpenGuild}
+                    />
+                </View>
+            }
+
 
         </Background>
     );

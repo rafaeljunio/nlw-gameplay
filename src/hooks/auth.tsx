@@ -19,7 +19,7 @@ const { REDIRECT_URI } = process.env;
 const { RESPONSE_TYPE } = process.env;
 
 import { api } from '../services/api';
-import {COLLECTION_USERS} from '../configs/database';
+import { COLLECTION_USERS } from '../configs/database';
 
 type User = {
     id: string;
@@ -34,6 +34,7 @@ type AuthContextData = {
     user: User;
     loading: boolean;
     signIn: () => Promise<void>;
+    signOut: () => Promise<void>;
 }
 
 type AuthProviderProps = {
@@ -85,24 +86,30 @@ function AuthProvider({ children }: AuthProviderProps) {
         }
     }
 
-    async function loadUserStorageData(){
+    async function signOut() {
+        setUser({} as User);
+        await AsyncStorage.removeItem(COLLECTION_USERS);
+    }
+
+    async function loadUserStorageData() {
         const storage = await AsyncStorage.getItem(COLLECTION_USERS);
-        if(storage){
+        if (storage) {
             const userLogged = JSON.parse(storage) as User;
             api.defaults.headers.authorization = `Bearer ${userLogged.token}`;
             setUser(userLogged);
         }
     }
 
-    useEffect(()=>{
+    useEffect(() => {
         loadUserStorageData();
-    },[])
+    }, [])
 
     return (
         <AuthContext.Provider value={{
             user,
             loading,
-            signIn
+            signIn,
+            signOut
         }}>
             {children}
         </AuthContext.Provider>
